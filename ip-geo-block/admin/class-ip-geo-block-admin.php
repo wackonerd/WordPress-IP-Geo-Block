@@ -578,6 +578,8 @@ class IP_Geo_Block_Admin {
 		 * Sanitize a string from user input
 		 */
 		foreach ( $output as $key => $val ) {
+			$key = sanitize_text_field( $key );
+
 			// delete old key
 			if ( ! array_key_exists( $key, $default ) ) {
 				unset( $output[ $key ] );
@@ -715,6 +717,10 @@ class IP_Geo_Block_Admin {
 				$key[] = $val;
 		}
 		$output['signature'] = implode( ',', $key );
+
+		// exception : convert associative array to simple array
+		foreach ( array( 'plugins', 'themes' ) as $key )
+			$output['exception'][ $key ] = array_keys( $output['exception'][ $key ] );;
 
 		return $output;
 	}

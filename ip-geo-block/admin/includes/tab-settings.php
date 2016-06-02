@@ -134,7 +134,6 @@ class IP_Geo_Block_Admin_Tab {
 				'option' => $option_name,
 				'field' => $field,
 				'value' => $options[ $field ],
-				'display' => $options['matching_rule'] !== 1,
 				'after' => $comma,
 			)
 		);
@@ -151,7 +150,6 @@ class IP_Geo_Block_Admin_Tab {
 				'option' => $option_name,
 				'field' => $field,
 				'value' => $options[ $field ],
-				'display' => $options['matching_rule'] !== 0,
 				'after' => $comma,
 			)
 		);
@@ -449,7 +447,7 @@ class IP_Geo_Block_Admin_Tab {
 			$key = esc_attr( $key[0] );
 			$exception .= '<li><input type="checkbox" id="ip_geo_block_settings_exception_plugins_' . $key
 				. '" name="ip_geo_block_settings[exception][plugins][' . $key
-				. ']" value="1"' . checked( isset( $options['exception']['plugins'][ $key ] ), TRUE, FALSE )
+				. ']" value="1"' . checked( in_array( $key, $options['exception']['plugins'] ), TRUE, FALSE )
 				. ' /><label for="ip_geo_block_settings_exception_plugins_' . $key
 				. ($active ? '">' : '" class="exceptions-inactive">') . esc_html( $val['Name'] ) . "</label></li>\n";
 		}
@@ -502,7 +500,7 @@ class IP_Geo_Block_Admin_Tab {
 			$active = ( ( $val = $val->get( 'Name' ) ) === $activated );
 			$exception .= '<li><input type="checkbox" id="ip_geo_block_settings_exception_themes_' . $key
 				. '" name="ip_geo_block_settings[exception][themes][' . $key
-				. ']" value="1"' . checked( isset( $options['exception']['themes'][ $key ] ), TRUE, FALSE )
+				. ']" value="1"' . checked( in_array( $key, $options['exception']['themes'] ), TRUE, FALSE )
 				. ' /><label for="ip_geo_block_settings_exception_themes_' . $key
 				. ($active ? '">' : '" class="exceptions-inactive">') . esc_html( $val ) . "</label></li>\n";
 		}
