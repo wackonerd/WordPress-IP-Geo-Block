@@ -36,6 +36,7 @@ class IP_Geo_Block {
 
 	// Globals in this class
 	public static $wp_path;
+	private $pagenow = NULL;
 	private $request_uri = NULL;
 	private $target_type = NULL;
 	private $remote_addr = NULL;
@@ -58,10 +59,12 @@ class IP_Geo_Block {
 			add_action( 'init', array( __CLASS__, 'activate' ), $priority );
 
 		// normalize requested uri
-		$this->request_uri = preg_replace( array( '!\.+/!', '!//+!' ), '/', $_SERVER['REQUEST_URI'] );
+		$this->pagenow = is_admin() && isset( $GLOBALS['pagenow'] ) ? $GLOBALS['pagenow'] : 'index.php';
+		$this->request_uri = strtolower( preg_replace( array( '!\.+/!', '!//+!' ), '/', $_SERVER['REQUEST_URI'] ) );
 
 		// setup the content folders
 		self::$wp_path = array( 'home' => untrailingslashit( parse_url( site_url(), PHP_URL_PATH ) ) ); // @since 2.6.0
+		$len = strlen( self::$wp_path['home'] );
 		$list = array(
 			'admin'     => 'admin_url',          // @since 2.6.0
 			'plugins'   => 'plugins_url',        // @since 2.6.0
@@ -69,7 +72,6 @@ class IP_Geo_Block {
 		);
 
 		// analize the validation target (admin|plugins|themes|includes)
-		$len = strlen( self::$wp_path['home'] );
 		foreach ( $list as $key => $val ) {
 			self::$wp_path[ $key ] = trailingslashit( substr( parse_url( call_user_func( $val ), PHP_URL_PATH ), $len ) );
 			if ( ! $this->target_type && FALSE !== strpos( $this->request_uri, self::$wp_path[ $key ] ) ) {
@@ -78,7 +80,6 @@ class IP_Geo_Block {
 		}
 
 		// WordPress core files
-		global $pagenow;
 		$key = array(
 			'wp-comments-post.php' => 'comment',
 			'wp-trackback.php'     => 'comment',
@@ -89,14 +90,16 @@ class IP_Geo_Block {
 
 		// wp-admin/*.php, wp-includes, wp-content/(plugins|themes|language|uploads)
 		if ( $this->target_type ) {
-			$val = ( 'admin' === $this->target_type ? 'admin' : 'direct' );
-			add_action( 'init', array( $this, 'validate_' . $val ), $priority );
+			if ( 'admin' === $this->target_type )
+				add_action( 'wp_loaded', array( $this, 'validate_admin'  ), $priority );
+			else
+				add_action( 'init',      array( $this, 'validate_direct' ), $priority );
 		}
 
 		// analize core validation target (comment|xmlrpc|login|public)
-		elseif ( isset( $key[ $pagenow ] ) ) {
-			if ( $validate[ $key[ $pagenow ] ] )
-				add_action( 'init', array( $this, 'validate_' . $key[ $pagenow ] ), $priority );
+		elseif ( isset( $key[ $this->pagenow ] ) ) {
+			if ( $validate[ $key[ $this->pagenow ] ] )
+				add_action( 'init', array( $this, 'validate_' . $key[ $this->pagenow ] ), $priority );
 		}
 
 		else {
@@ -384,9 +387,6 @@ class IP_Geo_Block {
 				break;
 		}
 
-		// Post process
-		$validate = apply_filters( self::PLUGIN_SLUG . "-post-$hook", $validate, $settings );
-
 		// update cache
 		IP_Geo_Block_API_Cache::update_cache( $hook, $validate, $settings );
 
@@ -485,7 +485,7 @@ class IP_Geo_Block {
 		$page   = isset( $_REQUEST['page'  ] ) ? $_REQUEST['page'  ] : NULL;
 		$action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : NULL;
 
-		switch ( $GLOBALS['pagenow'] ) {
+		switch ( $this->pagenow ) {
 		  case 'admin-ajax.php':
 			// if the request has an action for no privilege user, skip WP-ZEP
 			$zep = ! has_action( 'wp_ajax_nopriv_'.$action );
@@ -539,13 +539,15 @@ class IP_Geo_Block {
 	public function validate_direct() {
 		$settings = self::get_option( 'settings' );
 		$request = preg_quote( self::$wp_path[ $type = $this->target_type ], '/' );
+		$module = in_array( $type, array( 'plugins', 'themes' ) ) ? '[^\?\&\/]*' : '[^\?\&]*';
 
 		// wp-includes, wp-content/(plugins|themes|language|uploads)
-		preg_match( "/($request)([^\?\&]*)/", $this->request_uri, $matches );
+		preg_match( "/($request)($module)/", $this->request_uri, $module );
+		$request = empty( $module[2] ) ? $module[1] : $module[2];
 
-		// set validation type (1: Block by country, 2: WP-ZEP)
+		// set validation type (0: Bypass, 1: Block by country, 2: WP-ZEP)
 		$list = apply_filters( self::PLUGIN_SLUG . "-bypass-{$type}", $settings['exception'][ $type ] );
-		$type = isset( $matches[2] ) && in_array( $matches[2], $list, TRUE ) ? 0 : $settings['validation'][ $type ];
+		$type = in_array( $request, $list, TRUE ) ? 0 : $settings['validation'][ $type ];
 
 		// register validation of nonce (2: WP-ZEP)
 		if ( 2 & $type )
