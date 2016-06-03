@@ -59,7 +59,7 @@ class IP_Geo_Block {
 			add_action( 'init', array( __CLASS__, 'activate' ), $priority );
 
 		// normalize requested uri
-		$this->pagenow = is_admin() && isset( $GLOBALS['pagenow'] ) ? $GLOBALS['pagenow'] : 'index.php';
+		$this->pagenow = ! empty( $GLOBALS['pagenow'] ) ? $GLOBALS['pagenow'] : 'index.php';
 		$this->request_uri = strtolower( preg_replace( array( '!\.+/!', '!//+!' ), '/', $_SERVER['REQUEST_URI'] ) );
 
 		// setup the content folders
@@ -229,7 +229,7 @@ class IP_Geo_Block {
 	private static function make_validation( $ip, $result ) {
 		return array_merge( array(
 			'ip' => $ip,
-			'auth' => get_current_user_id(),
+			'auth' => get_current_user_id(), // unavailale before 'init' hook
 			'code' => 'ZZ', // may be overwritten with $result
 		), $result );
 	}
