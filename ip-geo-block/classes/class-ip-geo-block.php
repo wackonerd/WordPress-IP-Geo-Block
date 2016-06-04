@@ -46,6 +46,16 @@ class IP_Geo_Block {
 	 * 
 	 */
 	private function __construct() {
+		// https://codex.wordpress.org/Debugging_in_WordPress
+		if ( ! defined( 'WP_DEBUG' ) ) {
+			define( 'WP_DEBUG', true );
+			define( 'WP_DEBUG_LOG', true );
+			define( 'WP_DEBUG_DISPLAY', false );
+			@ini_set( 'display_errors', 0 );
+			@ini_set( 'error_log', WP_CONTENT_DIR . '/debug.log' );
+			wp_debug_mode(); // wp-includes/load.php
+		}
+
 		$settings = self::get_option( 'settings' );
 		$priority = $settings['priority'];
 		$validate = $settings['validation'];
@@ -548,7 +558,7 @@ class IP_Geo_Block {
 		// set validation type (0: Bypass, 1: Block by country, 2: WP-ZEP)
 		$list = apply_filters( self::PLUGIN_SLUG . "-bypass-{$type}", $settings['exception'][ $type ] );
 		$type = in_array( $request, $list, TRUE ) ? 0 : $settings['validation'][ $type ];
-
+		error_log( 'Line: ' . __LINE__ .' in File: ' . basename( __FILE__ ) . "\nRequest: $request, Exceptions: " . var_export( $list, TRUE ) . " --> $type" );
 		// register validation of nonce (2: WP-ZEP)
 		if ( 2 & $type )
 			add_filter( self::PLUGIN_SLUG . '-admin', array( $this, 'check_nonce' ), 5, 2 );
