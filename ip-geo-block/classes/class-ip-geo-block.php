@@ -97,7 +97,7 @@ class IP_Geo_Block {
 			'wp-login.php'         => 'login',
 			'wp-signup.php'        => 'login',
 		);
-
+error_log( basename( __FILE__ ) . ' (' . __LINE__ . ') Type: ' . $this->target_type . ', URI: ' . $this->request_uri );
 		// wp-admin/*.php, wp-includes, wp-content/(plugins|themes|language|uploads)
 		if ( $this->target_type ) {
 			if ( 'admin' === $this->target_type )
@@ -558,7 +558,7 @@ class IP_Geo_Block {
 		// set validation type (0: Bypass, 1: Block by country, 2: WP-ZEP)
 		$list = apply_filters( self::PLUGIN_SLUG . "-bypass-{$type}", $settings['exception'][ $type ] );
 		$type = in_array( $request, $list, TRUE ) ? 0 : $settings['validation'][ $type ];
-		error_log( 'Line: ' . __LINE__ .' in File: ' . basename( __FILE__ ) . "\nRequest: $request, Exceptions: " . var_export( $list, TRUE ) . " --> $type" );
+error_log( basename( __FILE__ ) . ' (' . __LINE__ . ") Module: $request, Exceptions: " . var_export( $list, TRUE ) . " --> $type" );
 		// register validation of nonce (2: WP-ZEP)
 		if ( 2 & $type )
 			add_filter( self::PLUGIN_SLUG . '-admin', array( $this, 'check_nonce' ), 5, 2 );
